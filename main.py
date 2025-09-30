@@ -1,87 +1,78 @@
 import tensorflow as tf
-from tensorflow.keras import models,layers
+from tensorflow.keras import models, layers
 import matplotlib.pyplot as plt
+import numpy as np
+
 BATCH_SIZE = 32
 IMAGE_SIZE = 255
 CHANNEL = 3
-EPOCHS = 5
-dataset = tf.keras.preprocessing.image_dataset_from_directory(
-directory='PlantVillage',
-seed=123,
-shuffle = True,
-image_size=(IMAGE_SIZE,IMAGE_SIZE),
-batch_size = BATCH_SIZE
-)
-class_names = dataset.class_names
-class_names
-for image_batch,label_batch in dataset.take(1):
-    print("Image Batch Shape : ", image_batch.shape)
-    print("Single Image : ", image_batch[0])
-    print("Label Image numpy : ", label_batch.numpy)
-    len(class_names)
-    plt.figure(figsize=(10, 10))
-for image_batch, labels_batch in dataset.take(1):
-    # Code to process the first batch of images and labels
-    for i in range(12):
-        ax = plt.subplot(3, 4, i + 1)
-        plt.imshow(image_batch[i].numpy().astype("uint8"))
-        plt.title(class_names[labels_batch[i]])
-        plt.axis("off")
-        len(dataset)
-        train_size = 0.8
-        len(dataset) * train_size
-        train_ds = dataset.take(54)
-        len(train_ds)
-        test_ds = dataset.skip(54)
-        len(test_ds)
-        val_size = 0.1
-        len(dataset)*val_size
-        val_ds = test_ds.take(6)
-        len(val_ds)
-        test_ds = test_ds.skip(6)
-        len(test_ds)
+EPOCHS = 20  # increase epochs here
 
-def get_dataset_partitions_tf(ds, train_split=0.8, val_split=0.1, test_split=0.1, shuffle=True, shuffle_size=1000):
+dataset = tf.keras.preprocessing.image_dataset_from_directory(
+    directory='PlantVillage',
+    seed=123,
+    shuffle=True,
+    image_size=(IMAGE_SIZE, IMAGE_SIZE),
+    batch_size=BATCH_SIZE
+)
+
+class_names = dataset.class_names
+
+# Optional: quick peek at one batch (purely diagnostic; safe to remove)
+for image_batch, label_batch in dataset.take(1):
+    print("Image Batch Shape:", image_batch.shape)
+    print("Labels batch shape:", label_batch.shape)
+
+def get_dataset_partitions_tf(
+    ds,
+    train_split=0.8,
+    val_split=0.1,
+    test_split=0.1,
+    shuffle=True,
+    shuffle_size=1000
+):
     assert (train_split + test_split + val_split) == 1
 
-    ds_size = len(ds)
-
+    ds_size = len(ds)  # number of batches since ds is already batched
     if shuffle:
         ds = ds.shuffle(shuffle_size, seed=12)
 
     train_size = int(train_split * ds_size)
     val_size = int(val_split * ds_size)
 
-    train_ds = ds.take(train_size)    
+    train_ds = ds.take(train_size)
     val_ds = ds.skip(train_size).take(val_size)
     test_ds = ds.skip(train_size).skip(val_size)
 
     return train_ds, val_ds, test_ds
 
 train_ds, val_ds, test_ds = get_dataset_partitions_tf(dataset)
-len(train_ds)
-len(val_ds)
-len(test_ds)
-train_ds = train_ds.shuffle(1000).cache().batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
-val_ds = val_ds.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
-test_ds = test_ds.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
+
+# Important: dataset is already batched; do not batch again
+train_ds = train_ds.cache().prefetch(tf.data.AUTOTUNE)
+val_ds = val_ds.cache().prefetch(tf.data.AUTOTUNE)
+test_ds = test_ds.cache().prefetch(tf.data.AUTOTUNE)
+
 resize_and_rescale = tf.keras.Sequential([
   layers.Resizing(IMAGE_SIZE, IMAGE_SIZE),
   layers.Rescaling(1./255),
 ])
+
 data_augmentation = tf.keras.Sequential([
   layers.RandomFlip("horizontal_and_vertical"),
   layers.RandomRotation(0.2),
 ])
-train_ds = train_ds.map(
-    lambda x, y: (data_augmentation(x, training=True), y)
-).prefetch(buffer_size=tf.data.AUTOTUNE)
-input_shape = (BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, CHANNEL)
+
+# Apply augmentation only on training
+train_ds = train_ds.map(lambda x, y: (data_augmentation(x, training=True), y)).prefetch(tf.data.AUTOTUNE)
+
+input_shape = (IMAGE_SIZE, IMAGE_SIZE, CHANNEL)
 n_classes = len(class_names)
 
 model = models.Sequential([
+    layers.Input(shape=input_shape),
     resize_and_rescale,
-    layers.Conv2D(32, kernel_size = (3,3), activation='relu', input_shape=input_shape),
+    layers.Conv2D(32, kernel_size = (3,3), activation='relu'),
     layers.MaxPooling2D((2, 2)),
     layers.Conv2D(64,  kernel_size = (3,3), activation='relu'),
     layers.MaxPooling2D((2, 2)),
@@ -97,8 +88,6 @@ model = models.Sequential([
     layers.Dense(64, activation='relu'),
     layers.Dense(n_classes, activation='softmax'),
 ])
-
-model.build(input_shape=input_shape)
 model.summary()
 model.compile(
     optimizer='adam',
@@ -110,7 +99,7 @@ history = model.fit(
     batch_size=BATCH_SIZE,
     validation_data=val_ds,
     verbose=1,
-    epochs=5,
+    epochs=EPOCHS,
 )
 scores = model.evaluate(test_ds)
 model.save("model.h5")
