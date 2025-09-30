@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Potato Disease Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <style>
+      body {
+        background: #f8f9fa;
+      }
+      .prediction-card {
+        background: #212529;
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        max-width: 700px;
+        margin: 50px auto;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      }
+      .img-preview {
+        max-height: 300px;
+        object-fit: contain;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="text-center mt-5">
+        <h1 class="fw-bold">Potato Disease Classifier</h1>
+        <p class="lead">Upload a potato leaf image and get predictions</p>
+    </div>
+
+    <div class="prediction-card">
+        <form action="/" method="post" enctype="multipart/form-data" class="mb-4">
+            <div class="mb-3">
+                <label for="fileInput" class="form-label">Choose an image:</label>
+                <input type="file" id="fileInput" name="file" accept=".jpg, .jpeg, .png" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Predict</button>
+        </form>
+
+        {% if message %}
+            <div class="alert alert-danger text-center">{{ message }}</div>
+        {% endif %}
+
+        {% if image_path %}
+            <div class="text-center">
+                <img src="{{ image_path }}" alt="Uploaded Image" class="img-fluid img-preview rounded mb-3">
+                <div class="fs-5">
+                    <span class="badge bg-info">Actual: {{ actual_label }}</span>
+                    <span class="badge bg-warning text-dark">Predicted: {{ predicted_label }}</span>
+                    <span class="badge bg-success">Confidence: {{ confidence }}%</span>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+  </body>
+</html>
